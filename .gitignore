@@ -1,0 +1,14 @@
+# GitHub에 올리지 않는 파일 (내 컴퓨터에만 남겨 둠)
+
+# 예전 점수 합산 퀴즈 보관 폴더
+old/
+
+# 디자인 시안 (참고용)
+reference/
+stitch-reference.html
+
+# 조사 자료
+*.md
+
+# 사용 허락을 받기 전의 블로그 사진
+images/after-image.webp
