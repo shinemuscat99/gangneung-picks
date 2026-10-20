@@ -12,7 +12,7 @@ const MAP_CONFIG = {
   // 지금은 임시 값입니다. 페이지를 웹에 올린 뒤에는 배포 주소로 바꿔 주세요.
   //   예) NAVER_APP_NAME: "https://내아이디.github.io/gangneung",
   // 따옴표 안의 글자만 바꾸면 됩니다. 버튼 주소에는 자동으로 인코딩되어 들어가요.
-  NAVER_APP_NAME: "gangneung-taste-local",
+  NAVER_APP_NAME: "https://vibecalibooks.github.io/gangneung-picks/",
 
   // 지도검색어가 비어 있을 때 업체 이름 앞에 붙이는 말 (기본 검색어 = "강릉 " + 이름)
   QUERY_PREFIX: "강릉 ",
