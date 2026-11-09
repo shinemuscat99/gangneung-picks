@@ -26,8 +26,6 @@ const MAP_CONFIG = {
 const NAVER_WEB_SEARCH = "https://map.naver.com/p/search/";
 const NAVER_APP_SEARCH = "nmap://search";
 const NAVER_ANDROID_PACKAGE = "com.nhn.android.nmap";
-// 네이버 플레이스 사진 탭 (플레이스 번호가 있을 때만 사용)
-const NAVER_PLACE_PHOTO = (id) => `https://m.place.naver.com/place/${id}/photo`;
 
 // 기기 구분: 휴대폰이면 앱 + 웹 버튼, 컴퓨터면 웹 버튼만
 // (컴퓨터에서 휴대폰 화면을 미리 보려면 주소 끝에 ?device=android 또는 ?device=ios 를 붙이세요)
@@ -73,7 +71,7 @@ function syntaxErrorLines(file, what) {
   const err = (window.DATA_FILE_ERRORS || {})[file];
   const where = err && err.line ? `${file}의 <strong>${err.line}번째 줄 또는 바로 윗줄</strong>` : file;
   return [
-    `⚠️ ${what}를 읽지 못했어요. ${where}에 문법 오류가 있는 것 같아요.`,
+    `${what}를 읽지 못했어요. ${where}에 문법 오류가 있는 것 같아요.`,
     "쉼표(,), 따옴표(\"), 괄호 { } [ ] 의 짝을 확인한 뒤 저장하고 새로고침(F5) 해 주세요."
   ];
 }
@@ -102,7 +100,7 @@ function loadPlaces() {
     return;
   }
   if (!Array.isArray(PLACES)) {
-    errorLines.push("⚠️ places.js의 PLACES는 [ ] 로 감싼 목록이어야 해요.");
+    errorLines.push("places.js의 PLACES는 [ ] 로 감싼 목록이어야 해요.");
     fatal = true;
     return;
   }
@@ -115,7 +113,7 @@ function loadPlaces() {
   PLACES.forEach((place, i) => {
     const who = `${i + 1}번째 업체 <strong>"${place && place.name ? place.name : "(이름 없음)"}"</strong>`;
     if (!place || typeof place !== "object") {
-      errorLines.push(`❌ ${i + 1}번째 업체: { } 로 감싼 업체 정보가 아니에요.`);
+      errorLines.push(`${i + 1}번째 업체: { } 로 감싼 업체 정보가 아니에요.`);
       return;
     }
 
@@ -150,8 +148,8 @@ function loadPlaces() {
     }
     if (text(place.mapUrl)) notes.push("mapUrl 칸은 이제 쓰지 않아요. 지도 링크는 네이버지도링크 칸으로 옮겨 주세요.");
 
-    problems.forEach((p) => errorLines.push(`❌ ${who}: ${p}`));
-    notes.forEach((n) => warningLines.push(`📝 ${who}: ${n}`));
+    problems.forEach((p) => errorLines.push(`${who}: ${p}`));
+    notes.forEach((n) => warningLines.push(`${who}: ${n}`));
     if (problems.length === 0) validPlaces.push(place);
   });
 }
@@ -175,10 +173,10 @@ function loadTips() {
   STEP_TIPS.forEach((tip, i) => {
     const who = `flow.js 추천 카드 ${i + 1}번 <strong>"${tip && tip.title ? tip.title : ""}"</strong>`;
     const when = (tip && tip.when) || {};
-    if (!areas.includes(when.area)) warningLines.push(`📝 ${who}: when.area "${when.area}"는 출발지 이름이 아니에요. (${areas.join(" / ")})`);
-    if (!moods.includes(when.mood)) warningLines.push(`📝 ${who}: when.mood "${when.mood}"는 2단계 value가 아니에요. (${moods.join(" / ")})`);
+    if (!areas.includes(when.area)) warningLines.push(`${who}: when.area "${when.area}"는 출발지 이름이 아니에요. (${areas.join(" / ")})`);
+    if (!moods.includes(when.mood)) warningLines.push(`${who}: when.mood "${when.mood}"는 2단계 value가 아니에요. (${moods.join(" / ")})`);
     ((tip && tip.actions) || []).filter((a) => !wants.includes(a))
-      .forEach((a) => warningLines.push(`📝 ${who}: actions의 "${a}"는 3단계 value가 아니에요. (${wants.join(" / ")})`));
+      .forEach((a) => warningLines.push(`${who}: actions의 "${a}"는 3단계 value가 아니에요. (${wants.join(" / ")})`));
   });
 }
 
@@ -190,12 +188,12 @@ function loadData() {
   }
 
   if (errorLines.length > 0) {
-    const head = fatal ? [] : ["⚠️ places.js에서 고쳐야 할 곳이 있어요. 아래 업체는 결과에서 빠졌어요."];
+    const head = fatal ? [] : ["places.js에서 고쳐야 할 곳이 있어요. 아래 업체는 결과에서 빠졌어요."];
     showNotice("data-error", [...head, ...errorLines]);
   }
   // 노란 안내는 한 줄로 접어 두고, 누르면 펼쳐짐
   if (warningLines.length > 0) {
-    $("warning-summary").textContent = `📝 나중에 채울 곳 ${warningLines.length}개 (결과에는 나와요) · 눌러서 보기`;
+    $("warning-summary").textContent = `나중에 채울 곳 ${warningLines.length}개 (결과에는 나와요) · 눌러서 보기`;
     showNotice("warning-body", warningLines);
     $("data-warning").hidden = false;
   }
@@ -373,7 +371,7 @@ function renderTip() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn btn-chip tip-action";
-    btn.textContent = `${opt.emoji ? opt.emoji + " " : ""}${withRo(opt.path || opt.label)} 보기`;
+    btn.textContent = `${withRo(opt.path || opt.label)} 보기`;
     btn.addEventListener("click", () => choose(opt));
     actions.appendChild(btn);
   });
@@ -406,7 +404,7 @@ function showResult() {
 
   // 내가 고른 길
   $("route-path").textContent = history.map((h) => h.option.path || h.option.label).join(" · ");
-  $("result-title").textContent = `${area}에서 가 볼 곳`;
+  $("result-title").textContent = "오늘의 추천이에요";
 
   const found = validPlaces.filter((p) => matches(p, category, cafeType));
   const same = found.filter((p) => text(p.area) === area);
@@ -423,10 +421,10 @@ function showResult() {
     message.hidden = true;
   } else if (others.length > 0) {
     message.hidden = false;
-    message.textContent = `${area}엔 아직 등록된 곳이 없어요. 다른 동네는 어때요? 👀`;
+    message.textContent = `${area}엔 아직 등록된 곳이 없어요. 다른 동네는 어때요?`;
   } else {
     message.hidden = false;
-    message.textContent = "아직 등록된 곳이 없어요 🙂 곧 채워 둘게요! 다른 선택지도 둘러보세요.";
+    message.textContent = "아직 등록된 곳이 없어요. 곧 채워 둘게요! 다른 선택지도 둘러보세요.";
   }
 
   // 다른 동네 (접어 두기, 같은 동네가 없으면 펼쳐 두기)
@@ -490,7 +488,7 @@ function renderSuggestions(area, category, cafeType) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "btn btn-chip";
-      btn.textContent = `${want.emoji ? want.emoji + " " : ""}${want.path || want.label}${cafe ? " · " + cafe.label : ""} 보기`;
+      btn.textContent = `${want.path || want.label}${cafe ? " · " + cafe.label : ""} 보기`;
       btn.addEventListener("click", () => jumpTo(want, cafe));
       list.appendChild(btn);
     }));
@@ -526,7 +524,7 @@ function renderPlace(place) {
   meta.className = "place-meta";
   const metaCategory = document.createElement("span");
   metaCategory.className = "place-meta-category";
-  metaCategory.textContent = categoryText;
+  metaCategory.textContent = `${categoryText} · ${area || `동네 ${EMPTY_FIELD}`}`;
   meta.appendChild(metaCategory);
   li.appendChild(meta);
 
@@ -603,7 +601,7 @@ function renderPlaceMedia(placeCategories, area, photo, name) {
 
   const areaBadge = document.createElement("span");
   areaBadge.className = "media-badge";
-  areaBadge.textContent = `📍 ${area || `동네 ${EMPTY_FIELD}`}`;
+  areaBadge.textContent = area || `동네 ${EMPTY_FIELD}`;
 
   if (photo) {
     const img = document.createElement("img");
@@ -669,23 +667,6 @@ function naverAppUrl(place) {
   return `${NAVER_APP_SEARCH}?${naverAppQuery(place)}`;
 }
 
-// 플레이스 사진 보기: 사진을 가져오지 않고 네이버 플레이스로 '연결'만 함 (저작권 문제 없음)
-//   1) 네이버지도링크에 플레이스 번호가 들어 있으면 (예: map.naver.com/p/entry/place/12345678)
-//      → 그 가게의 사진 탭으로 바로
-//   2) 공유 링크(naver.me/…)만 있으면 → 그 링크 (가게 화면에서 '사진' 탭을 누르면 됨)
-//   3) 둘 다 없으면 → 웹 검색 결과
-function naverPhotoUrl(place) {
-  const shared = text(place["네이버지도링크"]);
-  const id = (shared.match(/\/place\/(\d+)/) || [])[1];
-  if (id) return NAVER_PLACE_PHOTO(id);
-  return naverWebUrl(place);
-}
-
-// 화면 확인용 (샘플) 업체는 실제 가게가 아니라서 사진 보기 버튼을 빼요
-function isSamplePlace(place) {
-  return text(place.name).startsWith("(샘플)");
-}
-
 // 안드로이드: intent 주소. 앱이 없으면 크롬이 browser_fallback_url(웹 주소)로 자동 이동
 function naverAndroidIntentUrl(place) {
   return `intent://search?${naverAppQuery(place)}#Intent;scheme=nmap;action=android.intent.action.VIEW;` +
@@ -710,7 +691,7 @@ function renderMapButtons(place) {
   buttons.className = "map-buttons";
 
   // 웹으로 보기: 모든 기기, 새 탭
-  const web = mapLink("btn-map-web", "웹으로 보기 ↗", naverWebUrl(place), `${text(place.name)} 네이버지도 웹으로 보기 (새 탭)`);
+  const web = mapLink("btn-map-web", "웹으로 보기", naverWebUrl(place), `${text(place.name)} 네이버지도 웹으로 보기 (새 탭)`);
   web.target = "_blank";
   web.rel = "noopener noreferrer";
 
@@ -721,12 +702,12 @@ function renderMapButtons(place) {
   hint.textContent = "앱이 안 열리면 위의 '웹으로 보기'를 눌러 주세요.";
 
   if (DEVICE === "android") {
-    const app = mapLink("btn-map-app", "📍 네이버지도 앱으로 보기", naverAndroidIntentUrl(place), `${text(place.name)} 네이버지도 앱으로 보기`);
+    const app = mapLink("btn-map-app", "네이버지도 앱", naverAndroidIntentUrl(place), `${text(place.name)} 네이버지도 앱으로 보기`);
     app.target = "_blank";
     app.rel = "noopener noreferrer";
     buttons.appendChild(app);
   } else if (DEVICE === "ios") {
-    const app = mapLink("btn-map-app", "📍 네이버지도 앱으로 보기", naverAppUrl(place), `${text(place.name)} 네이버지도 앱으로 보기`);
+    const app = mapLink("btn-map-app", "네이버지도 앱", naverAppUrl(place), `${text(place.name)} 네이버지도 앱으로 보기`);
     app.addEventListener("click", (e) => {
       e.preventDefault();
       openIosApp(app.href, hint, web);
@@ -735,15 +716,6 @@ function renderMapButtons(place) {
   }
 
   buttons.appendChild(web);
-
-  // 네이버 플레이스 사진 보기: 모든 기기, 새 탭
-  if (!isSamplePlace(place)) {
-    const photo = mapLink("btn-map-photo", "📷 네이버 플레이스 사진 보기 ↗", naverPhotoUrl(place),
-      `${text(place.name)} 네이버 플레이스 사진 보기 (새 탭)`);
-    photo.target = "_blank";
-    photo.rel = "noopener noreferrer";
-    buttons.appendChild(photo);
-  }
 
   box.appendChild(buttons);
   if (DEVICE === "ios") box.appendChild(hint);

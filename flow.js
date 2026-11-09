@@ -119,7 +119,7 @@ const STEP_TIPS = [
   {
     when: { area: "안목", mood: "오래" },
     eyebrow: "안목에서 오래 있고 싶다면",
-    title: "🌊 남항진 해변",
+    title: "남항진 해변",
     text: "걸으면서 산책하거나 바다 보면서 멍때려 볼래?",
     actions: ["산책", "바다"]
   }
