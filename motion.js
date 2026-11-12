@@ -17,9 +17,11 @@
     card.style.setProperty("--my", `${e.clientY - box.top}px`);
   });
 
-  // 리빌: '움직임 줄이기'를 켠 기기에서는 처음부터 다 보이게 둠
   const result = document.getElementById("screen-result");
-  if (!result || !("IntersectionObserver" in window)) return;
+  if (!result) return;
+
+  // 리빌: '움직임 줄이기'를 켠 기기에서는 처음부터 다 보이게 둠
+  if (!("IntersectionObserver" in window)) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const REVEAL = ".place-card, .other-areas, .suggestions, .result-actions";

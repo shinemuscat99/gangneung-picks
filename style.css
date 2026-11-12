@@ -128,6 +128,7 @@ h1, h2, h3, h4 {
 #btn-result-restart::before,
 .btn-map::after,
 .other-areas summary::after,
+.place-toggle::after,
 .option.is-selected::after,
 #screen-question[data-step="cafeType"] .option::before {
   content: "";
@@ -341,19 +342,76 @@ h1, h2, h3, h4 {
   transition: width 0.4s var(--ease);
 }
 
+/* 단계 버튼 [상황] [종류] [위치]: 이미 고른 단계를 누르면 그 단계로 돌아감 */
+.step-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.step-nav:empty { display: none; }
+.step-chip {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  min-width: 0;
+  min-height: 52px;
+  padding: 4px 12px;
+  background: var(--surface-a);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-btn);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+  line-height: 1.3;
+  transition: border-color 0.25s var(--ease), background-color 0.25s var(--ease);
+}
+/* 윗줄: 단계 이름, 아랫줄: 고른 답 (길면 … 처리) */
+.step-chip-name {
+  font-weight: 700;
+}
+.step-chip-value {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* 지금 고르는 단계 */
+.step-chip.is-current {
+  background: var(--selected);
+  border-color: var(--accent);
+  cursor: default;
+}
+.step-chip.is-current .step-chip-name { color: var(--accent); }
+/* 아직 안 지나간 단계: 흐리게, 누를 수 없음 */
+.step-chip:disabled:not(.is-current) { opacity: 0.45; cursor: default; }
+.step-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) {
+  .step-chip.is-done:not(.is-current):hover { border-color: var(--accent); }
+}
+
 .question-head {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-top: 28px;
 }
+/* 질문 화면은 단계 버튼이 들어간 만큼 사이 간격을 조금 좁게 */
+#screen-question.is-active { gap: 14px; }
 /* 영문 단계 이름 */
+/* 영문 단계 이름: 아래 한글 제목과 같은 크기 */
 .question-head::after {
+  position: relative;
   order: -1;
   color: var(--accent);
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.14;
+  letter-spacing: -0.045em;
 }
 /* 단계 숫자 (뒤에 크게) */
 .question-head::before {
@@ -370,12 +428,12 @@ h1, h2, h3, h4 {
   letter-spacing: -0.06em;
   pointer-events: none;
 }
-#screen-question[data-step="area"] .question-head::before { content: "01"; }
-#screen-question[data-step="area"] .question-head::after { content: "Origin"; }
-#screen-question[data-step="mood"] .question-head::before { content: "02"; }
-#screen-question[data-step="mood"] .question-head::after { content: "Mood"; }
-#screen-question[data-step="want"] .question-head::before { content: "03"; }
-#screen-question[data-step="want"] .question-head::after { content: "Craving"; }
+#screen-question[data-step="mood"] .question-head::before { content: "01"; }
+#screen-question[data-step="mood"] .question-head::after { content: "Occasion"; }
+#screen-question[data-step="area"] .question-head::before { content: "03"; }
+#screen-question[data-step="area"] .question-head::after { content: "Location"; }
+#screen-question[data-step="want"] .question-head::before { content: "02"; }
+#screen-question[data-step="want"] .question-head::after { content: "Wants"; }
 #screen-question[data-step="cafeType"] .question-head::before { content: "04"; }
 #screen-question[data-step="cafeType"] .question-head::after { content: "Cafe"; }
 
@@ -395,7 +453,6 @@ h1, h2, h3, h4 {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
-  counter-reset: option;
 }
 
 /* 스포트라이트가 들어가는 표면: 보기, 가게 카드, 추천 카드, 접기 줄 */
@@ -427,35 +484,23 @@ h1, h2, h3, h4 {
 .option {
   position: relative;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  min-height: 112px;
-  padding: 16px;
+  min-height: 100px;
+  padding: 12px 16px;
   color: var(--text);
   border-radius: var(--radius-card);
   font-family: var(--font);
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 600;
-  line-height: 1.35;
-  letter-spacing: -0.02em;
-  text-align: left;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+  text-align: center;
   cursor: pointer;
-  counter-increment: option;
   animation: rise 0.3s var(--ease) backwards;
 }
 .option:active { transform: scale(0.98); }
-
-/* 왼쪽 위 작은 번호 */
-.option::before {
-  content: counter(option, decimal-leading-zero);
-  position: absolute;
-  top: 12px;
-  left: 16px;
-  color: var(--muted);
-  font-size: 16px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
 
 /* 보기 이모지는 숨김 (아이콘은 SVG로만) */
 .option-emoji { display: none; }
@@ -483,19 +528,20 @@ h1, h2, h3, h4 {
   color: var(--accent);
 }
 
-/* 보기가 5개 이상이면 2열 격자: 모든 칸 크기를 똑같이 */
+/* 보기가 5개 이상이면 2열 격자: 모든 칸 크기를 똑같이,
+   보기가 적어 화면이 남으면 칸이 세로로 늘어나 아래 버튼까지 채움 */
 .options:has(> .option:nth-child(5)) {
   display: grid;
+  flex: 1;
   grid-template-columns: 1fr 1fr;
-  grid-auto-rows: 1fr;
+  grid-auto-rows: minmax(100px, 1fr);
 }
 
-/* 카페 하위항목: 왼쪽 아이콘 + 글씨 */
+/* 카페 하위항목: 아이콘 + 글씨를 가운데에 */
 #screen-question[data-step="cafeType"] .option {
-  align-items: center;
-  gap: 16px;
+  gap: 14px;
   min-height: 92px;
-  padding-right: 44px;
+  padding: 16px 44px;
 }
 #screen-question[data-step="cafeType"] .option::before {
   position: static;
@@ -575,22 +621,60 @@ h1, h2, h3, h4 {
 }
 .section-title[hidden] { display: none; }
 
+/* 업체 목록: 이름 막대를 위에서 아래로 한 줄씩 */
 .place-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
-  counter-reset: place;
 }
 
 .place-card {
   position: relative;
   overflow: hidden;
-  padding: 22px 20px 20px;
   border-radius: var(--radius-card);
-  counter-increment: place;
+}
+/* 펼친 카드: 포인트 테두리 + 떠 있는 그림자 */
+.place-card.is-open {
+  border-color: rgba(11, 122, 108, 0.45);
+  box-shadow: var(--shadow-lift);
+}
+
+/* 이름 막대 (누르면 펼침) */
+.place-toggle {
+  position: relative;
+  display: grid;
+  /* 왼쪽: 분류·동네 + 이름 / 가운데 오른쪽: 회색 한 줄 소개 / 끝: 펼침 화살표 */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) auto;
+  grid-template-areas: "meta desc icon" "name desc icon";
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 2px;
+  width: 100%;
+  min-height: 72px;
+  padding: 14px 20px;
+  background: none;
+  border: 0;
+  color: var(--text);
+  font-family: var(--font);
+  text-align: left;
+  cursor: pointer;
+}
+.place-toggle::after {
+  --icon: var(--i-down);
+  grid-area: icon;
+  width: 22px;
+  height: 22px;
+  color: var(--accent);
+  transition: transform 0.3s var(--ease);
+}
+.place-card.is-open .place-toggle::after { transform: rotate(180deg); }
+.place-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+  border-radius: var(--radius-card);
 }
 
 /* 스크롤 리빌 (motion.js가 붙임) */
@@ -602,19 +686,14 @@ h1, h2, h3, h4 {
 }
 .reveal.is-in { opacity: 1; transform: none; }
 
-/* 맨 위: 번호 · 분류 · 동네 */
+/* 막대 윗줄: 번호 · 분류 · 동네 */
 .place-meta {
-  position: relative;
+  grid-area: meta;
   display: flex;
   gap: 10px;
   color: var(--accent);
   font-size: 16px;
   font-weight: 500;
-}
-.place-meta::before {
-  content: counter(place, decimal-leading-zero);
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
 }
 
 /* [카드 배경 사진] places.js의 사진 칸을 채우면 카드 전체에 옅게 깔림.
@@ -642,8 +721,10 @@ h1, h2, h3, h4 {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-top: 20px;
+  padding: 0 20px 20px;
+  animation: rise 0.3s var(--ease);
 }
+.place-body[hidden] { display: none; }
 
 .place-kind {
   color: var(--muted);
@@ -651,16 +732,29 @@ h1, h2, h3, h4 {
 }
 
 .place-name {
-  font-size: 32px;
-  line-height: 1.15;
-  letter-spacing: -0.04em;
+  grid-area: name;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.035em;
 }
+/* 펼치면 이름이 크게 */
+.place-card.is-open .place-name { font-size: 30px; }
 
+/* 막대 오른쪽 회색 한 줄 소개: 접혀 있을 땐 두 줄까지, 펼치면 전체 */
 .place-desc {
+  grid-area: desc;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   color: var(--muted);
   font-size: 16px;
-  line-height: 1.6;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: -0.02em;
 }
+.place-card.is-open .place-desc { -webkit-line-clamp: unset; }
 
 .place-fields,
 .place-missing {
@@ -688,19 +782,20 @@ h1, h2, h3, h4 {
   font-size: 16px;
 }
 
-/* 지도 버튼: [네이버지도 앱](포인트 채움) [웹으로 보기](테두리) */
+/* 지도 버튼: [네이버지도 앱](포인트 채움) [네이버 지도](테두리) */
 .map-actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 4px;
 }
 .map-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
-.map-buttons:not(:has(.btn-map-app)) { grid-template-columns: 1fr; }
+/* 휴대폰: 앱 버튼은 한 줄 전체, 아래에 [네이버 지도][네이버 리뷰] 반반 */
+.btn-map-app { grid-column: 1 / -1; }
 
 .btn-map {
   display: flex;
@@ -724,13 +819,15 @@ h1, h2, h3, h4 {
 .btn-map:active { transform: scale(0.98); }
 
 .btn-map-app { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.btn-map-web { background: #FFFFFF; color: var(--text); }
+.btn-map-web,
+.btn-map-review { background: #FFFFFF; color: var(--text); }
 
 @media (hover: hover) {
   .btn-map:hover { transform: translateY(-2px); }
   .btn-map:hover::after { transform: translate(2px, -2px); }
   .btn-map-app:hover { box-shadow: 0 10px 24px rgba(11, 122, 108, 0.28); }
-  .btn-map-web:hover { border-color: var(--text); }
+  .btn-map-web:hover,
+  .btn-map-review:hover { border-color: var(--text); }
 }
 
 /* 아이폰에서 앱이 안 열렸을 때 웹 버튼 강조 */
@@ -830,30 +927,24 @@ h1, h2, h3, h4 {
     align-content: start;
   }
   .topbar { grid-column: 1 / -1; }
+  #screen-question .step-nav { grid-column: 1 / -1; grid-row: 2; max-width: 640px; }
   .question-head {
     grid-column: 1;
-    grid-row: 2 / span 3;
+    grid-row: 3 / span 3;
     position: sticky;
     top: 96px;
     align-self: start;
   }
-  .question-title { font-size: 64px; }
+  .question-title,
+  .question-head::after { font-size: 64px; }
   .question-head::before { position: static; order: 1; font-size: 200px; margin-top: 16px; }
   .step-tip, .options, .question-actions { grid-column: 2; }
   .step-tip, .options { margin-top: 28px; }
   .question-actions { margin-top: 0; }
 
   .result-title { font-size: 96px; }
-  .place-list {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 16px;
-  }
-  .place-card { grid-column: span 3; }
-  /* 첫 번째 카드는 크게, 이어지는 카드는 3열로 */
-  .place-list .place-card:nth-child(1) { grid-column: 1 / -1; padding: 32px; }
-  .place-list .place-card:nth-child(1) .place-name { font-size: 56px; }
-  .place-list .place-card:nth-child(n + 2) { grid-column: span 2; }
+  /* 넓은 화면: 막대 목록은 읽기 좋은 폭으로 */
+  .place-list { max-width: 760px; }
   .result-actions { max-width: 480px; }
 }
 

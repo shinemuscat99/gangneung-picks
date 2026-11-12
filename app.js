@@ -18,7 +18,7 @@ const MAP_CONFIG = {
   QUERY_PREFIX: "강릉 ",
 
   // 아이폰에서 앱 버튼을 누른 뒤, 이 시간(밀리초) 동안 앱으로 넘어가지 않으면
-  // "웹으로 보기" 안내를 띄웁니다. 2000 = 2초
+  // "네이버 지도" 버튼 안내를 띄웁니다. 2000 = 2초
   APP_FALLBACK_MS: 2000
 };
 
@@ -26,6 +26,7 @@ const MAP_CONFIG = {
 const NAVER_WEB_SEARCH = "https://map.naver.com/p/search/";
 const NAVER_APP_SEARCH = "nmap://search";
 const NAVER_ANDROID_PACKAGE = "com.nhn.android.nmap";
+const NAVER_REVIEW_SEARCH = "https://m.search.naver.com/search.naver?query=";
 
 // 기기 구분: 휴대폰이면 앱 + 웹 버튼, 컴퓨터면 웹 버튼만
 // (컴퓨터에서 휴대폰 화면을 미리 보려면 주소 끝에 ?device=android 또는 ?device=ios 를 붙이세요)
@@ -80,10 +81,19 @@ function optionValues(stepId) {
   return STEPS[stepId].options.map((o) => o.value);
 }
 
-// 출발지 + 출발지는 아니지만 업체 동네로 쓸 수 있는 동네(flow.js의 EXTRA_AREAS)
+// 동네 보기 하나에 묶인 동네 이름들 (flow.js의 areas, 없으면 value 하나)
+function areasOf(option) {
+  return Array.isArray(option.areas) && option.areas.length ? option.areas : [option.value];
+}
+
+// places.js의 area 로 쓸 수 있는 모든 동네 이름
 function allAreas() {
-  const extra = typeof EXTRA_AREAS !== "undefined" && Array.isArray(EXTRA_AREAS) ? EXTRA_AREAS : [];
-  return [...optionValues("area"), ...extra];
+  return STEPS.area.options.flatMap(areasOf);
+}
+
+// 이 업체가 고른 동네 보기에 들어가는지
+function inAreaGroup(place, option) {
+  return areasOf(option).includes(text(place.area));
 }
 
 function loadFlow() {
@@ -133,10 +143,11 @@ function loadPlaces() {
       .filter((c) => !categories.includes(c))
       .forEach((c) => problems.push(`category(분류) <strong>"${c}"</strong>는 없는 분류 이름이에요. (${categories.join(" / ")})`));
 
-    if (placeCategories.includes(cafeCategory)) {
+    // 카페 종류 검사는 카페 종류 단계를 쓸 때만 (flow.js에서 커피·카페 보기에 next: "cafeType")
+    if (cafeCategory && placeCategories.includes(cafeCategory)) {
       if (!cafeType) notes.push(`cafeType(카페 종류)이 비어 있어서 카페 결과에 나오지 않아요. (${cafeTypes.join(" / ")})`);
       else if (!cafeTypes.includes(cafeType)) problems.push(`cafeType(카페 종류) <strong>"${cafeType}"</strong>는 없는 이름이에요. (${cafeTypes.join(" / ")})`);
-    } else if (cafeType && placeCategories.length > 0) {
+    } else if (cafeCategory && cafeType && placeCategories.length > 0) {
       notes.push(`카페가 아닌데 cafeType이 적혀 있어요. 이 칸은 무시돼요.`);
     }
 
@@ -173,7 +184,7 @@ function loadTips() {
   STEP_TIPS.forEach((tip, i) => {
     const who = `flow.js 추천 카드 ${i + 1}번 <strong>"${tip && tip.title ? tip.title : ""}"</strong>`;
     const when = (tip && tip.when) || {};
-    if (!areas.includes(when.area)) warningLines.push(`${who}: when.area "${when.area}"는 출발지 이름이 아니에요. (${areas.join(" / ")})`);
+    if (!areas.includes(when.area)) warningLines.push(`${who}: when.area "${when.area}"는 동네 보기 value가 아니에요. (${areas.join(" / ")})`);
     if (!moods.includes(when.mood)) warningLines.push(`${who}: when.mood "${when.mood}"는 2단계 value가 아니에요. (${moods.join(" / ")})`);
     ((tip && tip.actions) || []).filter((a) => !wants.includes(a))
       .forEach((a) => warningLines.push(`${who}: actions의 "${a}"는 3단계 value가 아니에요. (${wants.join(" / ")})`));
@@ -297,6 +308,7 @@ function renderStep(selectedValue) {
   $("progress-fill").style.width = `${(index / total) * 100}%`;
   $("question-title").textContent = step.title;
   renderTip();
+  renderStepNav();
 
   const box = $("options");
   box.innerHTML = "";
@@ -323,6 +335,65 @@ function renderStep(selectedValue) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// 단계 버튼 [상황] [종류] [위치]: 이미 고른 단계를 누르면 그 단계로 바로 돌아감
+// ---------------------------------------------------------------------------
+// 단계 순서: FIRST_STEP 부터 NEXT_STEP 을 따라감 (카페 종류처럼 보기에 붙은 단계는 고른 경우만)
+function stepOrder() {
+  const order = [];
+  let step = FIRST_STEP;
+  while (step && !order.includes(step)) {
+    order.push(step);
+    const picked = answerOf(step);
+    step = (picked && picked.next) || NEXT_STEP[step];
+  }
+  return order;
+}
+
+// 질문 화면 것은 지금 단계를 강조, 결과 화면 것은 모든 단계가 '고른 상태'
+function renderStepNav() {
+  document.querySelectorAll(".step-nav").forEach((nav) => {
+    nav.innerHTML = "";
+    const inResult = nav.closest("#screen-result") !== null;
+    stepOrder().forEach((step) => {
+      const answer = answerOf(step);
+      const isCurrent = !inResult && step === currentStep;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "step-chip" + (isCurrent ? " is-current" : "") + (answer ? " is-done" : "");
+      btn.disabled = !answer || isCurrent;
+      if (isCurrent) btn.setAttribute("aria-current", "step");
+
+      const name = document.createElement("span");
+      name.className = "step-chip-name";
+      name.textContent = (typeof STEP_NAMES !== "undefined" && STEP_NAMES[step]) || STEPS[step].title;
+
+      const value = document.createElement("span");
+      value.className = "step-chip-value";
+      value.textContent = answer ? (answer.path || answer.label) : isCurrent ? "고르는 중" : "아직";
+
+      btn.append(name, value);
+      if (answer) {
+        btn.setAttribute("aria-label", `${name.textContent} 다시 고르기 (지금: ${value.textContent})`);
+        btn.addEventListener("click", () => jumpToStep(step));
+      }
+      nav.appendChild(btn);
+    });
+  });
+}
+
+// 고른 단계로 돌아가기: 그 단계부터 뒤의 답은 지우고, 골랐던 보기는 체크된 채로 보여 줌
+function jumpToStep(step) {
+  const index = history.findIndex((h) => h.step === step);
+  if (index < 0) return;
+  const picked = history[index].option;
+  history = history.slice(0, index);
+  currentStep = step;
+  showScreen("question");
+  renderStep(picked.value);
+}
+
 function choose(option) {
   history.push({ step: currentStep, option });
   const next = option.next || NEXT_STEP[currentStep];
@@ -339,7 +410,7 @@ function choose(option) {
 // 결과
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-// 3단계 위 추천 카드 (flow.js의 STEP_TIPS, '출발지 + 상황'이 맞을 때만)
+// 3단계 위 추천 카드 (flow.js의 STEP_TIPS, '동네 + 상황'이 맞을 때만)
 // ---------------------------------------------------------------------------
 function renderTip() {
   const box = $("step-tip");
@@ -396,7 +467,8 @@ function matches(place, category, cafeType) {
 }
 
 function showResult() {
-  const area = answerOf("area").value;
+  const areaOption = answerOf("area");
+  const area = areaOption.value;
   const want = answerOf("want");
   const cafe = answerOf("cafeType");
   const category = want.value;
@@ -405,10 +477,12 @@ function showResult() {
   // 내가 고른 길
   $("route-path").textContent = history.map((h) => h.option.path || h.option.label).join(" · ");
   $("result-title").textContent = "오늘의 추천이에요";
+  renderStepNav();
 
-  const found = validPlaces.filter((p) => matches(p, category, cafeType));
-  const same = found.filter((p) => text(p.area) === area);
-  const others = found.filter((p) => text(p.area) !== area);
+  // 결과를 볼 때마다 업체 순서를 무작위로 섞음
+  const found = shuffled(validPlaces.filter((p) => matches(p, category, cafeType)));
+  const same = found.filter((p) => inAreaGroup(p, areaOption));
+  const others = found.filter((p) => !inAreaGroup(p, areaOption));
 
   // 같은 동네
   $("same-title").textContent = `${area}의 추천 업체 ${same.length}곳`;
@@ -435,9 +509,19 @@ function showResult() {
   fillGroups($("other-groups"), others);
 
   // 아무 데도 없으면: 이 동네에 업체가 있는 다른 선택지 안내
-  renderSuggestions(found.length === 0 ? area : null, category, cafeType);
+  renderSuggestions(found.length === 0 ? areaOption : null, category, cafeType);
 
   showScreen("result");
+}
+
+// 순서를 무작위로 섞은 새 목록 (원래 목록은 그대로)
+function shuffled(items) {
+  const copy = items.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 function fillList(list, places) {
@@ -445,16 +529,16 @@ function fillList(list, places) {
   places.forEach((p) => list.appendChild(renderPlace(p)));
 }
 
-// 다른 동네 업체를 동네별로 묶기 (출발지 순서 → EXTRA_AREAS 순서, 동네 미입력은 맨 뒤)
+// 다른 동네 업체를 동네 보기별로 묶기 (2단계 보기 순서, 동네 미입력은 맨 뒤)
 function fillGroups(container, places) {
   container.innerHTML = "";
-  const order = [...allAreas(), NO_AREA];
-  order.forEach((areaName) => {
-    const group = places.filter((p) => (text(p.area) || NO_AREA) === areaName);
+  const groups = STEPS.area.options.map((o) => [o.label, places.filter((p) => inAreaGroup(p, o))]);
+  groups.push([NO_AREA, places.filter((p) => !text(p.area))]);
+  groups.forEach(([groupName, group]) => {
     if (group.length === 0) return;
     const title = document.createElement("h4");
     title.className = "group-title";
-    title.textContent = `${areaName} · ${group.length}곳`;
+    title.textContent = `${groupName} · ${group.length}곳`;
     const list = document.createElement("ol");
     list.className = "place-list";
     fillList(list, group);
@@ -463,18 +547,19 @@ function fillGroups(container, places) {
 }
 
 // 같은 동네에서 업체가 등록된 다른 분류(카페는 카페 종류까지)를 버튼으로 보여줌
-function renderSuggestions(area, category, cafeType) {
+function renderSuggestions(areaOption, category, cafeType) {
   const box = $("suggestions");
   const list = $("suggestion-list");
   list.innerHTML = "";
-  if (!area) {
+  if (!areaOption) {
     box.hidden = true;
     return;
   }
+  const area = areaOption.value;
 
   const seen = new Set();
   validPlaces
-    .filter((p) => text(p.area) === area)
+    .filter((p) => inAreaGroup(p, areaOption))
     .forEach((p) => categoriesOf(p).forEach((placeCategory) => {
       const want = STEPS.want.options.find((o) => o.value === placeCategory);
       if (!want) return;
@@ -499,11 +584,13 @@ function renderSuggestions(area, category, cafeType) {
     : "이전으로 돌아가 다른 걸 골라 볼까요?";
 }
 
-// 제안 버튼: 3·4단계 답만 바꿔서 바로 결과로
+// 제안 버튼: '끌리는 것' 답만 바꿔서 바로 결과로 (고른 순서: 상황 → 끌리는 것 → 동네)
 function jumpTo(want, cafe) {
-  history = history.filter((h) => h.step === "area" || h.step === "mood");
-  history.push({ step: "want", option: want });
+  const mood = history.find((h) => h.step === "mood");
+  const area = history.find((h) => h.step === "area");
+  history = [mood, { step: "want", option: want }];
   if (cafe) history.push({ step: "cafeType", option: cafe });
+  history.push(area);
   showResult();
 }
 
@@ -514,52 +601,58 @@ function renderPlace(place) {
   const area = text(place.area);
   const cafeLabel = STEPS.cafeType.options.find((o) => o.value === text(place.cafeType));
   const placeCategories = categoriesOf(place);
-  const isCafe = STEPS.want.options.some((o) => o.next && placeCategories.includes(o.value));
   const categoryText = placeCategories
     .map((c) => (STEPS.want.options.find((o) => o.value === c) || {}).path || c)
     .join(" · ");
 
-  // 위 메타 줄: 왼쪽 번호(01, 02 … style.css가 자동으로 붙임), 오른쪽 분류
-  const meta = document.createElement("div");
-  meta.className = "place-meta";
-  const metaCategory = document.createElement("span");
-  metaCategory.className = "place-meta-category";
-  metaCategory.textContent = `${categoryText} · ${area || `동네 ${EMPTY_FIELD}`}`;
-  meta.appendChild(metaCategory);
-  li.appendChild(meta);
-
   // [사진 자리 ②] 사진(places.js의 사진 칸) 또는 풍경 그림 + 동네 배지
   li.appendChild(renderPlaceMedia(placeCategories, area, text(place["사진"]), text(place.name)));
 
+  // 이름 막대: 왼쪽 분류·동네 + 이름, 오른쪽 회색 한 줄 소개. 누르면 아래 세부 내용이 펼쳐짐
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "place-toggle";
+  toggle.setAttribute("aria-expanded", "false");
+
+  const meta = document.createElement("span");
+  meta.className = "place-meta";
+  meta.textContent = `${categoryText} · ${area || `동네 ${EMPTY_FIELD}`}`;
+
+  const name = document.createElement("span");
+  name.className = "place-name";
+  name.textContent = text(place.name);
+
+  toggle.append(meta, name);
+
+  const intro = text(place.intro);
+  if (intro) {
+    const desc = document.createElement("span");
+    desc.className = "place-desc";
+    desc.textContent = intro;
+    toggle.appendChild(desc);
+  }
+  li.appendChild(toggle);
+
   const body = document.createElement("div");
   body.className = "place-body";
+  body.id = `place-${++placeSerial}`;
+  body.hidden = true;
+  toggle.setAttribute("aria-controls", body.id);
+  toggle.addEventListener("click", () => togglePlace(li));
   li.appendChild(body);
 
   // 카페면 카페 종류를 작은 청록 줄로
-  if (isCafe && cafeLabel) {
+  if (cafeLabel) {
     const kind = document.createElement("p");
     kind.className = "place-kind";
     kind.textContent = cafeLabel.label;
     body.appendChild(kind);
   }
 
-  const name = document.createElement("h4");
-  name.className = "place-name";
-  name.textContent = text(place.name);
-  body.appendChild(name);
-
   // 정보: 채운 칸은 그대로 보여 주고, 빈 칸은 한 줄로 모아 "(직접 입력 예정)"
   const missing = [];
 
-  const intro = text(place.intro);
-  if (intro) {
-    const desc = document.createElement("p");
-    desc.className = "place-desc";
-    desc.textContent = intro;
-    body.appendChild(desc);
-  } else {
-    missing.push("한 줄 소개");
-  }
+  if (!intro) missing.push("한 줄 소개");
 
   const fields = document.createElement("dl");
   fields.className = "place-fields";
@@ -581,6 +674,23 @@ function renderPlace(place) {
   body.appendChild(renderMapButtons(place));
 
   return li;
+}
+
+// 업체 막대 펼치기: 한 번에 하나만 열림, 열린 것을 다시 누르면 접힘
+let placeSerial = 0;
+
+function togglePlace(card) {
+  const willOpen = !card.classList.contains("is-open");
+  screens.result.querySelectorAll(".place-card.is-open").forEach(setPlaceOpen(false));
+  if (willOpen) setPlaceOpen(true)(card);
+}
+
+function setPlaceOpen(open) {
+  return (card) => {
+    card.classList.toggle("is-open", open);
+    card.querySelector(".place-toggle").setAttribute("aria-expanded", String(open));
+    card.querySelector(".place-body").hidden = !open;
+  };
 }
 
 // 카드 위 그림 영역.
@@ -658,6 +768,17 @@ function naverWebUrl(place) {
   return NAVER_WEB_SEARCH + encodeURIComponent(mapQuery(place));
 }
 
+// 네이버 리뷰: 리뷰를 가져오지 않고 네이버 화면으로 '연결'만 함
+//   1) 네이버지도링크에 플레이스 번호가 있으면
+//      (예: map.naver.com/p/entry/place/12345678, m.place.naver.com/restaurant/12345678)
+//      → 그 가게의 방문자 리뷰 화면으로 바로
+//   2) 없으면 → 네이버 검색 결과 (가게 정보 상자의 '리뷰' 탭을 누르면 됨)
+function naverReviewUrl(place) {
+  const id = (text(place["네이버지도링크"]).match(/\/[a-z]+\/(\d{5,})/) || [])[1];
+  if (id) return `https://m.place.naver.com/place/${id}/review/visitor`;
+  return NAVER_REVIEW_SEARCH + encodeURIComponent(mapQuery(place));
+}
+
 // 앱: nmap://search?query=검색어&appname=설정값
 function naverAppQuery(place) {
   return `query=${encodeURIComponent(mapQuery(place))}&appname=${encodeURIComponent(MAP_CONFIG.NAVER_APP_NAME)}`;
@@ -690,8 +811,8 @@ function renderMapButtons(place) {
   const buttons = document.createElement("div");
   buttons.className = "map-buttons";
 
-  // 웹으로 보기: 모든 기기, 새 탭
-  const web = mapLink("btn-map-web", "웹으로 보기", naverWebUrl(place), `${text(place.name)} 네이버지도 웹으로 보기 (새 탭)`);
+  // 네이버 지도(웹): 모든 기기, 새 탭
+  const web = mapLink("btn-map-web", "네이버 지도", naverWebUrl(place), `${text(place.name)} 네이버지도 웹으로 보기 (새 탭)`);
   web.target = "_blank";
   web.rel = "noopener noreferrer";
 
@@ -699,7 +820,7 @@ function renderMapButtons(place) {
   const hint = document.createElement("p");
   hint.className = "map-hint";
   hint.hidden = true;
-  hint.textContent = "앱이 안 열리면 위의 '웹으로 보기'를 눌러 주세요.";
+  hint.textContent = "앱이 안 열리면 위의 '네이버 지도' 버튼을 눌러 주세요.";
 
   if (DEVICE === "android") {
     const app = mapLink("btn-map-app", "네이버지도 앱", naverAndroidIntentUrl(place), `${text(place.name)} 네이버지도 앱으로 보기`);
@@ -716,6 +837,12 @@ function renderMapButtons(place) {
   }
 
   buttons.appendChild(web);
+
+  // 네이버 리뷰: 모든 기기, 새 탭 (네이버 지도 오른쪽)
+  const review = mapLink("btn-map-review", "네이버 리뷰", naverReviewUrl(place), `${text(place.name)} 네이버 리뷰 보기 (새 탭)`);
+  review.target = "_blank";
+  review.rel = "noopener noreferrer";
+  buttons.appendChild(review);
 
   box.appendChild(buttons);
   if (DEVICE === "ios") box.appendChild(hint);

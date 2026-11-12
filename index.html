@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
   <main class="app">
@@ -30,13 +30,13 @@
       <div class="horizon" aria-hidden="true"></div>
       <div class="hero">
         <h1 id="start-title"><span class="line">강릉청년</span> <span class="line">놀줴이야</span></h1>
-        <p class="lead">출발지와 지금 상황, 끌리는 걸 고르면<br>지금 가기 좋은 강릉 가게를 골라 드려요.</p>
+        <p class="lead">지금 상황과 끌리는 것, 동네를 고르면<br>지금 가기 좋은 강릉 가게를 골라 드려요.</p>
       </div>
 
       <button id="btn-start" class="btn btn-primary btn-cta" type="button">시작하기</button>
     </section>
 
-    <!-- 단계 화면 (출발지 → 상황 → 끌리는 것 → 카페 종류) -->
+    <!-- 단계 화면 (상황 → 끌리는 것 → 동네) -->
     <section id="screen-question" class="screen" aria-live="polite">
       <!-- 위쪽 막대: [단계 숫자] + 진행 막대 -->
       <header class="topbar">
@@ -45,7 +45,9 @@
         </div>
         <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
       </header>
-      <!-- 특정 '출발지 + 상황'일 때만 보이는 추천 카드 (flow.js의 STEP_TIPS) -->
+      <!-- 단계 버튼 [상황] [종류] [위치]: 이미 고른 단계를 누르면 그 단계로 돌아감 (app.js가 채움) -->
+      <nav class="step-nav" aria-label="단계 다시 고르기"></nav>
+      <!-- 특정 '동네 + 상황'일 때만 보이는 추천 카드 (flow.js의 STEP_TIPS) -->
       <div id="step-tip" class="step-tip" hidden></div>
       <div class="question-head">
         <h2 id="question-title" class="question-title"></h2>
@@ -60,6 +62,8 @@
 
     <!-- 결과 화면 -->
     <section id="screen-result" class="screen">
+      <!-- 단계 버튼: 결과에서 바로 상황·종류·위치를 다시 고르기 -->
+      <nav class="step-nav" aria-label="단계 다시 고르기"></nav>
       <!-- 결과 머리: 제목 → 내가 고른 길 -->
       <div class="result-head">
         <h2 id="result-title" class="result-title"></h2>
@@ -100,9 +104,9 @@
       });
     });
   </script>
-  <script src="flow.js"></script>
-  <script src="places.js"></script>
-  <script src="app.js"></script>
-  <script src="motion.js"></script>
+  <script src="flow.js?v=2"></script>
+  <script src="places.js?v=2"></script>
+  <script src="app.js?v=2"></script>
+  <script src="motion.js?v=2"></script>
 </body>
 </html>
