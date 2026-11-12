@@ -802,16 +802,10 @@ h1, h2, h3, h4 {
 }
 .place-card.is-open .place-desc { -webkit-line-clamp: unset; }
 
-.place-fields,
-.place-missing {
+.place-fields {
   margin: 6px 0 0;
   padding-top: 14px;
   border-top: 1px solid var(--line);
-}
-.place-fields + .place-missing {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
 }
 
 .place-fields {
@@ -820,13 +814,9 @@ h1, h2, h3, h4 {
   gap: 6px 14px;
   font-size: 16px;
 }
-.place-fields dt { color: var(--muted); }
-.place-fields dd { margin: 0; color: var(--text); }
-
-.place-missing {
-  color: var(--muted);
-  font-size: 16px;
-}
+/* 항목 이름 칸은 최대 6.5글자 폭: "이런 때 가면 좋아요"처럼 긴 이름은 두 줄로 */
+.place-fields dt { max-width: 6.5em; color: var(--muted); }
+.place-fields dd { min-width: 0; margin: 0; color: var(--text); overflow-wrap: anywhere; }
 
 /* 지도 버튼: [네이버 지도] [네이버 리뷰] (모든 기기 같음) */
 .map-actions {

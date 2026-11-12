@@ -16,11 +16,18 @@ const MAP_CONFIG = {
 const NAVER_WEB_SEARCH = "https://map.naver.com/p/search/";
 const NAVER_REVIEW_SEARCH = "https://m.search.naver.com/search.naver?query=";
 
-const EMPTY_FIELD = "(직접 입력 예정)";
 const NO_AREA = "동네 미입력";
 
 // 업체 카드에 보여줄 칸 (memo 는 화면에 보여주지 않음)
-const PLACE_FIELDS = { address: "주소", hours: "영업시간", menu: "메뉴", price: "가격" };
+// 비어 있는 칸은 화면에 나오지 않음. 순서대로 펼친 카드에 보임
+const PLACE_FIELDS = {
+  address: "주소",
+  hours: "영업시간",
+  menu: "대표 메뉴",
+  price: "가격",
+  when: "이런 때 가면 좋아요",
+  tip: "방문 팁"
+};
 
 // ---------------------------------------------------------------------------
 // 화면 요소
@@ -651,7 +658,7 @@ function renderPlace(place) {
 
   const meta = document.createElement("span");
   meta.className = "place-meta";
-  meta.textContent = `${categoryText} · ${area || `동네 ${EMPTY_FIELD}`}`;
+  meta.textContent = area ? `${categoryText} · ${area}` : categoryText;
 
   const name = document.createElement("span");
   name.className = "place-name";
@@ -684,26 +691,14 @@ function renderPlace(place) {
     body.appendChild(kind);
   }
 
-  // 정보: 채운 칸은 그대로 보여 주고, 빈 칸은 한 줄로 모아 "(직접 입력 예정)"
-  const missing = [];
-
-  if (!intro) missing.push("한 줄 소개");
-
+  // 정보: 채운 칸만 보여 주고, 빈 칸은 아예 그리지 않음
   const fields = document.createElement("dl");
   fields.className = "place-fields";
   Object.entries(PLACE_FIELDS).forEach(([key, label]) => {
     const value = text(place[key]);
     if (value) addField(fields, label, value);
-    else missing.push(label);
   });
   if (fields.children.length > 0) body.appendChild(fields);
-
-  if (missing.length > 0) {
-    const note = document.createElement("p");
-    note.className = "place-missing";
-    note.textContent = `${missing.join(" · ")} ${EMPTY_FIELD}`;
-    body.appendChild(note);
-  }
 
   // 네이버지도 버튼
   body.appendChild(renderMapButtons(place));
@@ -746,7 +741,7 @@ function renderPlaceMedia(placeCategories, area, photo, name) {
 
   const areaBadge = document.createElement("span");
   areaBadge.className = "media-badge";
-  areaBadge.textContent = area || `동네 ${EMPTY_FIELD}`;
+  areaBadge.textContent = area;
 
   if (photo) {
     const img = document.createElement("img");
