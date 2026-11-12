@@ -437,6 +437,12 @@ h1, h2, h3, h4 {
 #screen-question[data-step="cafeType"] .question-head::before { content: "04"; }
 #screen-question[data-step="cafeType"] .question-head::after { content: "Cafe"; }
 
+/* 휴대폰처럼 좁은 화면에서는 큰 배경 숫자가 제목 글자와 겹치므로 숨김
+   (순서는 위쪽 "1 / 3"과 단계 버튼이 알려 줌) */
+@media (max-width: 599px) {
+  .question-head::before { display: none; }
+}
+
 .question-title {
   position: relative;
   font-size: 40px;
@@ -733,17 +739,32 @@ h1, h2, h3, h4 {
 
 .place-name {
   grid-area: name;
+  min-width: 0;
   font-size: 22px;
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -0.035em;
+  overflow-wrap: anywhere;   /* 띄어쓰기 없는 긴 이름도 칸 안에서 줄바꿈 */
 }
-/* 펼치면 이름이 크게 */
+/* 펼치면: 이름은 크게 한 줄 전체, 소개는 이름 아래로 내려 전체 폭에 */
+.place-card.is-open .place-toggle {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "meta icon" "name icon" "desc desc";
+}
 .place-card.is-open .place-name { font-size: 30px; }
+.place-card.is-open .place-desc { margin-top: 8px; }
+/* 아주 좁은 화면(360px 미만)에서는 소개를 이름 아래로 */
+@media (max-width: 359px) {
+  .place-toggle {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "meta icon" "name icon" "desc icon";
+  }
+}
 
 /* 막대 오른쪽 회색 한 줄 소개: 접혀 있을 땐 두 줄까지, 펼치면 전체 */
 .place-desc {
   grid-area: desc;
+  min-width: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
