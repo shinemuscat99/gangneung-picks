@@ -560,6 +560,31 @@ h1, h2, h3, h4 {
 #screen-question[data-step="cafeType"] .option:nth-child(3)::before { --icon: var(--i-heart); }
 #screen-question[data-step="cafeType"] .option:nth-child(4)::before { --icon: var(--i-cookie); }
 
+/* 여러 개 고르는 단계의 [다음] 버튼 */
+.btn-next { width: 100%; min-height: 52px; }
+.btn-next[hidden] { display: none; }
+.btn-next:disabled { opacity: 0.45; cursor: default; transform: none; box-shadow: none; }
+/* [다음] 버튼이 들어가는 상황 단계는 칸 높이를 조금 낮춰 한 화면에 */
+#screen-question[data-step="mood"] .options { grid-auto-rows: auto; align-content: start; }
+#screen-question[data-step="mood"] .option { min-height: 76px; }
+
+/* 묶음(group) 사이 얇은 구분선: 묶음이 바뀌는 줄 위에 */
+.option.group-start,
+.option.group-start + .option { margin-top: 10px; }
+.option.group-start::before {
+  content: "";
+  position: absolute;
+  top: -11px;
+  left: 0;
+  width: calc(200% + var(--gap));
+  height: 1px;
+  background: var(--line-strong);
+  pointer-events: none;
+}
+
+/* '끌리는 것' 보기는 문장이 길어서 글자를 조금 작게 */
+#screen-question[data-step="want"] .option { font-size: 17px; }
+
 /* 질문 아래: 이전으로(왼쪽) · 처음으로(오른쪽) */
 .question-actions {
   display: grid;
@@ -946,7 +971,7 @@ h1, h2, h3, h4 {
   .question-title,
   .question-head::after { font-size: 64px; }
   .question-head::before { position: static; order: 1; font-size: 200px; margin-top: 16px; }
-  .step-tip, .options, .question-actions { grid-column: 2; }
+  .step-tip, .options, .btn-next, .question-actions { grid-column: 2; }
   .step-tip, .options { margin-top: 28px; }
   .question-actions { margin-top: 0; }
 

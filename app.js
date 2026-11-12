@@ -261,19 +261,31 @@ function orderedOptions(stepId) {
   const options = STEPS[stepId].options.slice();
   if (stepId !== "want") return options;
 
+  // 상황을 여러 개 골랐으면 고른 순서대로 각 규칙을 합침
   const mood = answerOf("mood");
-  const rule = mood && WANT_ORDER[mood.value];
-  if (!rule) return options;
+  const rules = mood ? valuesOf(mood).map((v) => WANT_ORDER[v]).filter(Boolean) : [];
+  if (rules.length === 0) return options;
 
-  const pick = (values) => (values || []).map((v) => options.find((o) => o.value === v)).filter(Boolean);
-  const front = pick(rule.front);
-  const back = pick(rule.back);
+  const pick = (values) => [...new Set(values)].map((v) => options.find((o) => o.value === v)).filter(Boolean);
+  const front = pick(rules.flatMap((r) => r.front || []));
+  const back = pick(rules.flatMap((r) => r.back || [])).filter((o) => !front.includes(o));
   const middle = options.filter((o) => !front.includes(o) && !back.includes(o));
   return [...front, ...middle, ...back];
 }
 
+// 고른 답의 value 목록 (여러 개 고른 단계는 배열)
+function valuesOf(option) {
+  return [].concat(option.value);
+}
+
+// 여러 개 고르는 단계에서 지금까지 고른 value (고른 순서대로)
+let picking = [];
+
 function renderStep(selectedValue) {
   const step = STEPS[currentStep];
+  const maxPick = step.maxPick > 1 ? step.maxPick : 1;
+  const selected = selectedValue == null ? [] : [].concat(selectedValue);
+  picking = maxPick > 1 ? selected.slice(0, maxPick) : [];
   const index = history.length;
   const total = stepCount();
 
@@ -283,15 +295,21 @@ function renderStep(selectedValue) {
   $("progress-text").textContent = `${index + 1} / ${total}`;
   $("progress-fill").style.width = `${(index / total) * 100}%`;
   $("question-title").textContent = step.title;
+  $("question-hint").textContent = maxPick > 1
+    ? `최대 ${maxPick}개까지 골라 주세요.`
+    : "딱 하나만 골라 주세요.";
   renderTip();
   renderStepNav();
 
   const box = $("options");
   box.innerHTML = "";
-  orderedOptions(currentStep).forEach((opt) => {
+  orderedOptions(currentStep).forEach((opt, i, list) => {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "option" + (opt.value === selectedValue ? " is-selected" : "");
+    btn.className = "option" + (selected.includes(opt.value) ? " is-selected" : "");
+    // 묶음(group)이 바뀌는 첫 칸: 위에 구분선
+    if (i > 0 && opt.group && opt.group !== list[i - 1].group) btn.classList.add("group-start");
+    btn.dataset.value = opt.value;
 
     if (opt.emoji) {
       const emoji = document.createElement("span");
@@ -306,8 +324,49 @@ function renderStep(selectedValue) {
     label.textContent = opt.label;
     btn.appendChild(label);
 
-    btn.addEventListener("click", () => choose(opt));
+    btn.addEventListener("click", () => (maxPick > 1 ? togglePick(opt, maxPick) : choose(opt)));
     box.appendChild(btn);
+  });
+  updateNextButton(maxPick);
+}
+
+// 여러 개 고르는 단계: 누르면 고르고, 다시 누르면 빼고, 최대 개수를 넘으면 안내만
+function togglePick(option, maxPick) {
+  const at = picking.indexOf(option.value);
+  // 같은 묶음(group)에서 이미 고른 게 있으면 그걸 빼고 새로 고른 걸로 바꿈
+  const sameGroup = option.group
+    ? STEPS[currentStep].options.find((o) => o.group === option.group && o.value !== option.value && picking.includes(o.value))
+    : null;
+  if (at >= 0) picking.splice(at, 1);
+  else if (sameGroup) picking.splice(picking.indexOf(sameGroup.value), 1, option.value);
+  else if (picking.length < maxPick) picking.push(option.value);
+  else {
+    $("question-hint").textContent = `최대 ${maxPick}개까지예요. 하나를 빼고 다시 골라 주세요.`;
+    return;
+  }
+  $("question-hint").textContent = `최대 ${maxPick}개까지 골라 주세요.`;
+  $("options").querySelectorAll(".option").forEach((b) => {
+    b.classList.toggle("is-selected", picking.includes(b.dataset.value));
+  });
+  updateNextButton(maxPick);
+}
+
+// [다음] 버튼: 여러 개 고르는 단계에서만 보임
+function updateNextButton(maxPick) {
+  const next = $("btn-next");
+  next.hidden = maxPick <= 1;
+  next.disabled = picking.length === 0;
+  next.textContent = picking.length === 0 ? "골라 주세요" : `다음 (${picking.length}/${maxPick})`;
+}
+
+// 고른 것들을 하나의 답으로 묶어서 다음 단계로
+function choosePicked() {
+  if (picking.length === 0) return;
+  const opts = picking.map((v) => STEPS[currentStep].options.find((o) => o.value === v)).filter(Boolean);
+  choose({
+    value: opts.map((o) => o.value),
+    label: opts.map((o) => o.label).join(" · "),
+    path: opts.map((o) => o.path || o.label).join(" · ")
   });
 }
 
@@ -397,7 +456,7 @@ function renderTip() {
   const area = answerOf("area");
   const mood = answerOf("mood");
   const tip = STEP_TIPS.find((t) => t && t.when && area && mood &&
-    t.when.area === area.value && t.when.mood === mood.value);
+    t.when.area === area.value && valuesOf(mood).includes(t.when.mood));
   if (!tip) return;
 
   const eyebrow = document.createElement("p");
@@ -793,6 +852,7 @@ function renderMapButtons(place) {
 // ---------------------------------------------------------------------------
 $("btn-start").addEventListener("click", restart);
 $("btn-back").addEventListener("click", goBack);
+$("btn-next").addEventListener("click", choosePicked);
 // 처음부터 다시: 어느 단계에서 누르든 맨 첫 시작 화면으로 (1단계에서 눌러도 반응이 보이도록)
 $("btn-restart").addEventListener("click", goHome);
 $("btn-result-back").addEventListener("click", goBack);
