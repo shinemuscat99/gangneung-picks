@@ -8,37 +8,13 @@
 // 네이버지도 버튼 설정 — 바꿀 일이 있으면 여기만 고치세요.
 // ===========================================================================
 const MAP_CONFIG = {
-  // 네이버지도 앱이 "어느 서비스에서 열었는지" 알아보는 값 (네이버 URL Scheme의 appname).
-  // 지금은 임시 값입니다. 페이지를 웹에 올린 뒤에는 배포 주소로 바꿔 주세요.
-  //   예) NAVER_APP_NAME: "https://내아이디.github.io/gangneung",
-  // 따옴표 안의 글자만 바꾸면 됩니다. 버튼 주소에는 자동으로 인코딩되어 들어가요.
-  NAVER_APP_NAME: "https://shinemuscat99.github.io/gangneung-picks/",
-
   // 지도검색어가 비어 있을 때 업체 이름 앞에 붙이는 말 (기본 검색어 = "강릉 " + 이름)
-  QUERY_PREFIX: "강릉 ",
-
-  // 아이폰에서 앱 버튼을 누른 뒤, 이 시간(밀리초) 동안 앱으로 넘어가지 않으면
-  // "네이버 지도" 버튼 안내를 띄웁니다. 2000 = 2초
-  APP_FALLBACK_MS: 2000
+  QUERY_PREFIX: "강릉 "
 };
 
 // 네이버지도 주소 (네이버 공식 형식)
 const NAVER_WEB_SEARCH = "https://map.naver.com/p/search/";
-const NAVER_APP_SEARCH = "nmap://search";
-const NAVER_ANDROID_PACKAGE = "com.nhn.android.nmap";
 const NAVER_REVIEW_SEARCH = "https://m.search.naver.com/search.naver?query=";
-
-// 기기 구분: 휴대폰이면 앱 + 웹 버튼, 컴퓨터면 웹 버튼만
-// (컴퓨터에서 휴대폰 화면을 미리 보려면 주소 끝에 ?device=android 또는 ?device=ios 를 붙이세요)
-const DEVICE = (() => {
-  const forced = new URLSearchParams(location.search).get("device");
-  if (forced === "android" || forced === "ios" || forced === "desktop") return forced;
-  const ua = navigator.userAgent || "";
-  if (/Android/i.test(ua)) return "android";
-  // 최신 아이패드는 자신을 맥(MacIntel)이라고 알려서 터치 지원 여부로 한 번 더 확인
-  if (/iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return "ios";
-  return "desktop";
-})();
 
 const EMPTY_FIELD = "(직접 입력 예정)";
 const NO_AREA = "동네 미입력";
@@ -779,22 +755,6 @@ function naverReviewUrl(place) {
   return NAVER_REVIEW_SEARCH + encodeURIComponent(mapQuery(place));
 }
 
-// 앱: nmap://search?query=검색어&appname=설정값
-function naverAppQuery(place) {
-  return `query=${encodeURIComponent(mapQuery(place))}&appname=${encodeURIComponent(MAP_CONFIG.NAVER_APP_NAME)}`;
-}
-
-function naverAppUrl(place) {
-  return `${NAVER_APP_SEARCH}?${naverAppQuery(place)}`;
-}
-
-// 안드로이드: intent 주소. 앱이 없으면 크롬이 browser_fallback_url(웹 주소)로 자동 이동
-function naverAndroidIntentUrl(place) {
-  return `intent://search?${naverAppQuery(place)}#Intent;scheme=nmap;action=android.intent.action.VIEW;` +
-    `category=android.intent.category.BROWSABLE;package=${NAVER_ANDROID_PACKAGE};` +
-    `S.browser_fallback_url=${encodeURIComponent(naverWebUrl(place))};end`;
-}
-
 function mapLink(className, label, href, ariaLabel) {
   const a = document.createElement("a");
   a.className = `btn-map ${className}`;
@@ -816,26 +776,6 @@ function renderMapButtons(place) {
   web.target = "_blank";
   web.rel = "noopener noreferrer";
 
-  // 앱으로 보기: 휴대폰에서만
-  const hint = document.createElement("p");
-  hint.className = "map-hint";
-  hint.hidden = true;
-  hint.textContent = "앱이 안 열리면 위의 '네이버 지도' 버튼을 눌러 주세요.";
-
-  if (DEVICE === "android") {
-    const app = mapLink("btn-map-app", "네이버지도 앱", naverAndroidIntentUrl(place), `${text(place.name)} 네이버지도 앱으로 보기`);
-    app.target = "_blank";
-    app.rel = "noopener noreferrer";
-    buttons.appendChild(app);
-  } else if (DEVICE === "ios") {
-    const app = mapLink("btn-map-app", "네이버지도 앱", naverAppUrl(place), `${text(place.name)} 네이버지도 앱으로 보기`);
-    app.addEventListener("click", (e) => {
-      e.preventDefault();
-      openIosApp(app.href, hint, web);
-    });
-    buttons.appendChild(app);
-  }
-
   buttons.appendChild(web);
 
   // 네이버 리뷰: 모든 기기, 새 탭 (네이버 지도 오른쪽)
@@ -845,28 +785,7 @@ function renderMapButtons(place) {
   buttons.appendChild(review);
 
   box.appendChild(buttons);
-  if (DEVICE === "ios") box.appendChild(hint);
   return box;
-}
-
-// 아이폰: 앱을 열어 보고, 잠시 뒤에도 이 페이지가 그대로 보이면 웹 버튼 안내
-function openIosApp(url, hint, webButton) {
-  let left = false;
-  const markLeft = () => { left = true; };
-  document.addEventListener("visibilitychange", markLeft, { once: true });
-  window.addEventListener("pagehide", markLeft, { once: true });
-  // (blur 는 쓰지 않음: 사파리의 '주소가 유효하지 않음' 창만 떠도 blur 가 생길 수 있어서)
-
-  window.location.href = url;
-
-  setTimeout(() => {
-    document.removeEventListener("visibilitychange", markLeft);
-    window.removeEventListener("pagehide", markLeft);
-    if (!left && document.visibilityState === "visible") {
-      hint.hidden = false;
-      webButton.classList.add("is-suggested");
-    }
-  }, MAP_CONFIG.APP_FALLBACK_MS);
 }
 
 // ---------------------------------------------------------------------------

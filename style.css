@@ -803,7 +803,7 @@ h1, h2, h3, h4 {
   font-size: 16px;
 }
 
-/* 지도 버튼: [네이버지도 앱](포인트 채움) [네이버 지도](테두리) */
+/* 지도 버튼: [네이버 지도] [네이버 리뷰] (모든 기기 같음) */
 .map-actions {
   display: flex;
   flex-direction: column;
@@ -815,8 +815,7 @@ h1, h2, h3, h4 {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
-/* 휴대폰: 앱 버튼은 한 줄 전체, 아래에 [네이버 지도][네이버 리뷰] 반반 */
-.btn-map-app { grid-column: 1 / -1; }
+/* [네이버 지도][네이버 리뷰] 반반 */
 
 .btn-map {
   display: flex;
@@ -839,27 +838,15 @@ h1, h2, h3, h4 {
 .btn-map::after { --icon: var(--i-up-right); transition: transform 0.25s var(--ease); }
 .btn-map:active { transform: scale(0.98); }
 
-.btn-map-app { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .btn-map-web,
 .btn-map-review { background: #FFFFFF; color: var(--text); }
 
 @media (hover: hover) {
   .btn-map:hover { transform: translateY(-2px); }
   .btn-map:hover::after { transform: translate(2px, -2px); }
-  .btn-map-app:hover { box-shadow: 0 10px 24px rgba(11, 122, 108, 0.28); }
   .btn-map-web:hover,
   .btn-map-review:hover { border-color: var(--text); }
 }
-
-/* 아이폰에서 앱이 안 열렸을 때 웹 버튼 강조 */
-.btn-map-web.is-suggested { box-shadow: 0 0 0 2px var(--accent); }
-
-.map-hint {
-  color: var(--muted);
-  font-size: 16px;
-  text-align: center;
-}
-.map-hint[hidden] { display: none; }
 
 /* 다른 동네도 볼래? */
 .other-areas[hidden] { display: none; }
